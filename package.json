@@ -1,0 +1,16 @@
+{
+  "name": "zen-selection-translator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run build"
+  },
+  "devDependencies": {
+    "@types/firefox-webext-browser": "^120.0.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}

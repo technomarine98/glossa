@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Selection Translator for Zen",
+  "version": "1.0.0",
+  "description": "Instant English–Russian translations beside your text selection.",
+  "permissions": ["storage", "clipboardWrite"],
+  "host_permissions": [
+    "https://api.mymemory.translated.net/*",
+    "https://translation.googleapis.com/*",
+    "https://libretranslate.com/*"
+  ],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "selection-translator@zen.local",
+      "strict_min_version": "128.0"
+    }
+  }
+}
