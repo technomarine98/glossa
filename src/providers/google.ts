@@ -1,5 +1,6 @@
 import type { Language, TargetLanguage } from "../shared/types";
 import { ProviderError, type TranslationProvider, type TranslationResult } from "./types";
+import { rateLimitError, readProviderJson } from "./http";
 
 interface GoogleResponse {
   data?: {
@@ -34,7 +35,8 @@ export class GoogleProvider implements TranslationProvider {
       body: JSON.stringify({ q: text, source, target, format: "text" }),
       signal,
     });
-    const data = (await response.json()) as GoogleResponse;
+    const data = await readProviderJson<GoogleResponse>(response, "Google Cloud");
+    if (response.status === 429) throw rateLimitError(response, "Google Cloud");
     if (!response.ok) {
       throw new ProviderError(data.error?.message || `Google Cloud returned HTTP ${response.status}.`);
     }

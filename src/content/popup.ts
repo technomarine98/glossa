@@ -24,6 +24,7 @@ export class TranslationPopup {
   private readonly retryButton = document.createElement("button");
   private translatedText = "";
   private destroyed = false;
+  private retryTimer: number | undefined;
 
   constructor(
     private readonly anchor: SelectionSnapshot,
@@ -83,6 +84,7 @@ export class TranslationPopup {
   }
 
   setLoading(source: TargetLanguage, target: TargetLanguage): void {
+    this.clearRetryTimer();
     this.languages.textContent = `${languageNames[source]} → ${languageNames[target]}`;
     this.loading.hidden = false;
     this.translation.hidden = true;
@@ -94,6 +96,7 @@ export class TranslationPopup {
   }
 
   setResult(result: TranslationResult, source: TargetLanguage, target: TargetLanguage): void {
+    this.clearRetryTimer();
     this.translatedText = result.text;
     this.translation.textContent = result.text;
     this.languages.textContent = `${languageNames[source]} → ${languageNames[target]}`;
@@ -105,19 +108,47 @@ export class TranslationPopup {
     this.reposition();
   }
 
-  setError(message: string): void {
+  setError(message: string, retryAt?: number): void {
+    this.clearRetryTimer();
     this.error.textContent = message;
     this.loading.hidden = true;
     this.translation.hidden = true;
     this.error.hidden = false;
     this.retryButton.hidden = false;
     this.copyButton.hidden = true;
+    if (retryAt && retryAt > Date.now()) {
+      const updateRetry = () => {
+        const seconds = Math.ceil((retryAt - Date.now()) / 1000);
+        if (seconds <= 0) {
+          this.clearRetryTimer();
+        } else {
+          this.retryButton.disabled = true;
+          this.retryButton.textContent = seconds < 60 ? `Retry in ${seconds}s`
+            : seconds < 3600 ? `Retry in ${Math.ceil(seconds / 60)}m`
+            : `Retry in ${Math.ceil(seconds / 3600)}h`;
+        }
+      };
+      updateRetry();
+      this.retryTimer = window.setInterval(updateRetry, 1000);
+    }
     this.reposition();
+  }
+
+  containsEvent(event: Event): boolean {
+    return event.composedPath().includes(this.host);
+  }
+
+  private clearRetryTimer(): void {
+    if (this.retryTimer !== undefined) window.clearInterval(this.retryTimer);
+    this.retryTimer = undefined;
+    this.retryButton.disabled = false;
+    this.retryButton.textContent = "Retry";
   }
 
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.clearRetryTimer();
     document.removeEventListener("pointerdown", this.onOutsidePointerDown, true);
     document.removeEventListener("keydown", this.onKeyDown, true);
     document.removeEventListener("scroll", this.reposition, true);

@@ -92,8 +92,13 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #f1f3f4;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 button:focus-visible {
@@ -155,7 +160,7 @@ button:focus-visible {
     color: #e8eaed;
   }
 
-  button:hover {
+  button:hover:not(:disabled) {
     background: #3c4043;
   }
 

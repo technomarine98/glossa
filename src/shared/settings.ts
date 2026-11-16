@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: TranslationSettings = {
   requireModifier: false,
   modifierKey: "Alt",
   disabledSites: [],
+  myMemoryEmail: "",
   libreTranslateUrl: "https://libretranslate.com",
   libreTranslateApiKey: "",
   googleApiKey: "",

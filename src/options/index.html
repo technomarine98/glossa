@@ -18,7 +18,7 @@
       label { font-weight: 500; }
       .check label { font-weight: 400; }
       input, select, textarea, button { font: inherit; }
-      input[type="number"], input[type="url"], input[type="password"], select, textarea { width: 100%; padding: 8px 10px; color: inherit; background: #fff; border: 1px solid #bdc1c6; border-radius: 6px; box-sizing: border-box; }
+      input[type="number"], input[type="url"], input[type="password"], input[type="email"], select, textarea { width: 100%; padding: 8px 10px; color: inherit; background: #fff; border: 1px solid #bdc1c6; border-radius: 6px; box-sizing: border-box; }
       textarea { min-height: 90px; resize: vertical; }
       .hint { margin: 5px 0 0; color: #5f6368; font-size: 12px; font-weight: 400; }
       .actions { display: flex; align-items: center; gap: 12px; }
@@ -29,7 +29,7 @@
       @media (max-width: 520px) { .row { grid-template-columns: 1fr; gap: 7px; } }
       @media (prefers-color-scheme: dark) {
         body { color: #e8eaed; background: #202124; }
-        section, input[type="number"], input[type="url"], input[type="password"], select, textarea { background: #292a2d; border-color: #5f6368; }
+        section, input[type="number"], input[type="url"], input[type="password"], input[type="email"], select, textarea { background: #292a2d; border-color: #5f6368; }
         .intro, .hint, #status { color: #bdc1c6; }
       }
     </style>
@@ -76,7 +76,11 @@
             <option value="google">Google Cloud Translation</option>
           </select>
         </div>
-        <p class="hint" id="mymemory-hint">MyMemory is the free default and has limited daily usage. No API key is required.</p>
+        <div id="mymemory-settings">
+          <p class="hint">MyMemory allows 5,000 characters per day anonymously, or 50,000 with a valid contact email. No API key is required.</p>
+          <div class="row"><label for="myMemoryEmail">Contact email (optional)</label><input id="myMemoryEmail" type="email" autocomplete="off" aria-describedby="mymemory-email-hint" /></div>
+          <p class="hint" id="mymemory-email-hint">If provided, your email is sent to MyMemory with each translation so they can contact you about service issues. Leave blank to use the anonymous allowance.</p>
+        </div>
         <div id="libre-settings" hidden>
           <div class="row"><label for="libreTranslateUrl">Server URL</label><input id="libreTranslateUrl" type="url" required placeholder="http://localhost:5000" /></div>
           <div class="row"><label for="libreTranslateApiKey">API key (optional)</label><input id="libreTranslateApiKey" type="password" autocomplete="off" /></div>

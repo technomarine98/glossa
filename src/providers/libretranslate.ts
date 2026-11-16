@@ -1,5 +1,6 @@
 import type { Language, TargetLanguage } from "../shared/types";
 import { ProviderError, type TranslationProvider, type TranslationResult } from "./types";
+import { rateLimitError, readProviderJson } from "./http";
 
 interface LibreTranslateResponse {
   translatedText?: string;
@@ -40,7 +41,8 @@ export class LibreTranslateProvider implements TranslationProvider {
       }),
       signal,
     });
-    const data = (await response.json()) as LibreTranslateResponse;
+    const data = await readProviderJson<LibreTranslateResponse>(response, "LibreTranslate");
+    if (response.status === 429) throw rateLimitError(response, "LibreTranslate");
     if (!response.ok) {
       throw new ProviderError(data.error || `LibreTranslate returned HTTP ${response.status}.`);
     }

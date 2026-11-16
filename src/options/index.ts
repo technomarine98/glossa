@@ -8,6 +8,7 @@ const requireModifier = document.querySelector<HTMLInputElement>("#requireModifi
 const libreUrl = document.querySelector<HTMLInputElement>("#libreTranslateUrl")!;
 const libreKey = document.querySelector<HTMLInputElement>("#libreTranslateApiKey")!;
 const googleKey = document.querySelector<HTMLInputElement>("#googleApiKey")!;
+const myMemoryEmail = document.querySelector<HTMLInputElement>("#myMemoryEmail")!;
 
 function checkbox(id: string): HTMLInputElement {
   return document.querySelector<HTMLInputElement>(`#${id}`)!;
@@ -24,7 +25,8 @@ function select(id: string): HTMLSelectElement {
 function updateVisibility(): void {
   document.querySelector<HTMLElement>("#libre-settings")!.hidden = provider.value !== "libretranslate";
   document.querySelector<HTMLElement>("#google-settings")!.hidden = provider.value !== "google";
-  document.querySelector<HTMLElement>("#mymemory-hint")!.hidden = provider.value !== "mymemory";
+  document.querySelector<HTMLElement>("#mymemory-settings")!.hidden = provider.value !== "mymemory";
+  myMemoryEmail.disabled = provider.value !== "mymemory";
   document.querySelector<HTMLElement>("#modifier-row")!.hidden = !requireModifier.checked;
   libreUrl.required = provider.value === "libretranslate";
   googleKey.required = provider.value === "google";
@@ -41,6 +43,7 @@ function fillForm(settings: TranslationSettings): void {
   libreUrl.value = settings.libreTranslateUrl;
   libreKey.value = settings.libreTranslateApiKey;
   googleKey.value = settings.googleApiKey;
+  myMemoryEmail.value = settings.myMemoryEmail;
   document.querySelector<HTMLTextAreaElement>("#disabledSites")!.value = settings.disabledSites.join("\n");
   updateVisibility();
 }
@@ -58,6 +61,7 @@ function readForm(): TranslationSettings {
       .split(/\s+/)
       .map((site) => site.trim().toLowerCase())
       .filter(Boolean),
+    myMemoryEmail: myMemoryEmail.value.trim(),
     libreTranslateUrl: libreUrl.value.trim(),
     libreTranslateApiKey: libreKey.value.trim(),
     googleApiKey: googleKey.value.trim(),

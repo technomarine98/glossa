@@ -55,15 +55,23 @@ You can change:
 
 **MyMemory** is the default. It requires no account or API key, but its free service has usage limits and may occasionally be unavailable.
 
+MyMemory's [documented allowance](https://mymemory.translated.net/doc/usagelimits.php) is 5,000 characters per day anonymously, or 50,000 with a valid contact email. You can enter an optional **Contact email** in settings to use the higher allowance. That email is sent only to MyMemory, with each MyMemory translation request.
+
 **LibreTranslate** supports a hosted service or your own server. Enter the server URL and, if required, its API key. Zen may ask permission to contact a custom server.
 
 **Google Cloud Translation** uses the official Cloud Translation Basic API. It requires your own API key and a configured Google Cloud account.
+
+### Too many requests (429)
+
+A 429 error means your provider is limiting requests or your usage allowance has been reached. The extension spaces requests apart and pauses new requests to that provider after a rate limit response. It respects the provider's retry time when supplied; otherwise it pauses for one minute. **Retry** shows the remaining wait and becomes available afterward. Cached translations still work during the pause. Cooldowns survive the background process going idle and are cleared when the browser closes.
+
+For a daily allowance, wait for it to reset or change providers in settings. Increasing the selection delay helps avoid requests while adjusting a selection, but does not increase a daily allowance.
 
 ## Privacy
 
 The extension sends only the text you select to the translation provider you choose. It does not send entire pages, cookies, or browsing history.
 
-Provider requests are subject to that provider's own privacy policy. Translation settings and any API keys you enter are stored locally in the browser. Recent translations are cached temporarily in memory.
+Provider requests are subject to that provider's own privacy policy. Translation settings, any API keys, and the optional MyMemory contact email you enter are stored locally in the browser. Recent translations are cached temporarily in memory. Provider cooldowns are kept in browser session storage, which is cleared when the browser closes.
 
 ## Build from source
 

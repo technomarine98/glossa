@@ -13,6 +13,7 @@ export interface TranslationSettings {
   requireModifier: boolean;
   modifierKey: ModifierKey;
   disabledSites: string[];
+  myMemoryEmail: string;
   libreTranslateUrl: string;
   libreTranslateApiKey: string;
   googleApiKey: string;
@@ -50,6 +51,7 @@ export interface TranslationFailure {
   requestId: string;
   error: string;
   aborted?: boolean;
+  retryAt?: number;
 }
 
 export type TranslationResponse = TranslationSuccess | TranslationFailure;

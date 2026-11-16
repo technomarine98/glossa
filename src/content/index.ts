@@ -74,7 +74,7 @@ async function runTranslation(
       active.translatedText = response.result.text;
       popup.setResult(response.result, response.source, response.target);
     } else if (!response.aborted) {
-      popup.setError(response.error);
+      popup.setError(response.error, response.retryAt);
     }
   } catch (error) {
     if (active?.id !== id) return;
@@ -107,6 +107,7 @@ function canTranslate(): boolean {
 }
 
 function scheduleTranslation(event: MouseEvent | KeyboardEvent): void {
+  if (active?.popup.containsEvent(event)) return;
   if (!canTranslate()) {
     closeActive();
     return;
@@ -116,6 +117,9 @@ function scheduleTranslation(event: MouseEvent | KeyboardEvent): void {
   if (event instanceof KeyboardEvent && !isCompletedKeyboardSelection(event)) return;
   const snapshot = captureSelection(event.target);
   if (!snapshot) return;
+  const { source, target } = directionFor(snapshot.text);
+  const resolvedSource = source === "auto" ? detectLanguage(snapshot.text) : source;
+  if (active?.text === snapshot.text && active.source === resolvedSource && active.target === target) return;
   closeActive();
   selectionTimer = window.setTimeout(() => {
     selectionTimer = undefined;
