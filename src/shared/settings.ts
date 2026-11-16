@@ -13,6 +13,10 @@ export const DEFAULT_SETTINGS: TranslationSettings = {
   libreTranslateUrl: "https://libretranslate.com",
   libreTranslateApiKey: "",
   googleApiKey: "",
+  lingvaUrl: "https://lingva.ml",
+  fallbackEnabled: true,
+  fallbackLingvaUrls: ["https://lingva.ml", "https://translate.plausibility.cloud"],
+  fallbackLibreTranslateUrls: ["https://translate.fedilab.app", "https://translate.cutie.dating"],
 };
 
 export async function getSettings(): Promise<TranslationSettings> {

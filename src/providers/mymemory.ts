@@ -36,14 +36,14 @@ export class MyMemoryProvider implements TranslationProvider {
       throw rateLimitError(response, "MyMemory", detail, dailyLimit);
     }
     if (!response.ok) {
-      throw new ProviderError(`MyMemory returned HTTP ${response.status}.`);
+      throw new ProviderError(`MyMemory returned HTTP ${response.status}.`, response.status >= 500 || response.status === 408);
     }
     if (data.responseStatus !== undefined && Number(data.responseStatus) !== 200) {
-      throw new ProviderError(data.responseDetails || `MyMemory returned status ${data.responseStatus}.`);
+      throw new ProviderError(data.responseDetails || `MyMemory returned status ${data.responseStatus}.`, Number(data.responseStatus) >= 500);
     }
     if (!translatedText) {
       const detail = data.responseDetails || "MyMemory did not return a translation.";
-      throw new ProviderError(detail);
+      throw new ProviderError(detail, true);
     }
 
     return { text: translatedText, detectedLanguage: resolvedSource };

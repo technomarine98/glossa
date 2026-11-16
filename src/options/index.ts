@@ -9,6 +9,7 @@ const libreUrl = document.querySelector<HTMLInputElement>("#libreTranslateUrl")!
 const libreKey = document.querySelector<HTMLInputElement>("#libreTranslateApiKey")!;
 const googleKey = document.querySelector<HTMLInputElement>("#googleApiKey")!;
 const myMemoryEmail = document.querySelector<HTMLInputElement>("#myMemoryEmail")!;
+const lingvaUrl = document.querySelector<HTMLInputElement>("#lingvaUrl")!;
 
 function checkbox(id: string): HTMLInputElement {
   return document.querySelector<HTMLInputElement>(`#${id}`)!;
@@ -29,7 +30,12 @@ function updateVisibility(): void {
   myMemoryEmail.disabled = provider.value !== "mymemory";
   document.querySelector<HTMLElement>("#modifier-row")!.hidden = !requireModifier.checked;
   libreUrl.required = provider.value === "libretranslate";
+  libreUrl.disabled = provider.value !== "libretranslate";
   googleKey.required = provider.value === "google";
+  document.querySelector<HTMLElement>("#lingva-settings")!.hidden = provider.value !== "lingva";
+  document.querySelector<HTMLElement>("#fallback-settings")!.hidden = !checkbox("fallbackEnabled").checked;
+  lingvaUrl.required = provider.value === "lingva";
+  lingvaUrl.disabled = provider.value !== "lingva";
 }
 
 function fillForm(settings: TranslationSettings): void {
@@ -44,6 +50,10 @@ function fillForm(settings: TranslationSettings): void {
   libreKey.value = settings.libreTranslateApiKey;
   googleKey.value = settings.googleApiKey;
   myMemoryEmail.value = settings.myMemoryEmail;
+  lingvaUrl.value = settings.lingvaUrl;
+  checkbox("fallbackEnabled").checked = settings.fallbackEnabled;
+  document.querySelector<HTMLTextAreaElement>("#fallbackLingvaUrls")!.value = settings.fallbackLingvaUrls.join("\n");
+  document.querySelector<HTMLTextAreaElement>("#fallbackLibreTranslateUrls")!.value = settings.fallbackLibreTranslateUrls.join("\n");
   document.querySelector<HTMLTextAreaElement>("#disabledSites")!.value = settings.disabledSites.join("\n");
   updateVisibility();
 }
@@ -65,29 +75,49 @@ function readForm(): TranslationSettings {
     libreTranslateUrl: libreUrl.value.trim(),
     libreTranslateApiKey: libreKey.value.trim(),
     googleApiKey: googleKey.value.trim(),
+    lingvaUrl: lingvaUrl.value.trim(),
+    fallbackEnabled: checkbox("fallbackEnabled").checked,
+    fallbackLingvaUrls: readServerUrls("fallbackLingvaUrls"),
+    fallbackLibreTranslateUrls: readServerUrls("fallbackLibreTranslateUrls"),
   };
 }
 
-async function requestLibrePermission(settings: TranslationSettings): Promise<boolean> {
-  if (settings.provider !== "libretranslate") return true;
-  const url = new URL(settings.libreTranslateUrl);
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("LibreTranslate must use an HTTP or HTTPS URL.");
+function serverUrl(value: string): URL {
+  const url = new URL(value);
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+    throw new Error("Server addresses must be HTTP or HTTPS URLs without credentials, query parameters, or fragments.");
   }
-  return browser.permissions.request({ origins: [`${url.origin}/*`] });
+  return url;
+}
+
+function readServerUrls(id: string): string[] {
+  const lines = document.querySelector<HTMLTextAreaElement>(`#${id}`)!.value.split(/\s+/).filter(Boolean);
+  // Turning off automatic switching must work even if an edited backup URL is invalid.
+  if (!checkbox("fallbackEnabled").checked) return [...new Set(lines)];
+  if (lines.length > 2) throw new Error("Enter at most two backup servers for each service.");
+  return [...new Set(lines.map((line) => serverUrl(line).href.replace(/\/$/, "")))];
+}
+
+async function requestProviderPermissions(settings: TranslationSettings): Promise<boolean> {
+  const servers = settings.provider === "libretranslate" ? [settings.libreTranslateUrl]
+    : settings.provider === "lingva" ? [settings.lingvaUrl] : [];
+  if (settings.fallbackEnabled) servers.push(...settings.fallbackLingvaUrls, ...settings.fallbackLibreTranslateUrls);
+  const origins = [...new Set(servers.map((server) => `${serverUrl(server).origin}/*`))];
+  return origins.length === 0 || browser.permissions.request({ origins });
 }
 
 provider.addEventListener("change", updateVisibility);
 requireModifier.addEventListener("change", updateVisibility);
+checkbox("fallbackEnabled").addEventListener("change", updateVisibility);
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   void (async () => {
     try {
       status.textContent = "Saving…";
       const settings = readForm();
-      const permitted = await requestLibrePermission(settings);
+      const permitted = await requestProviderPermissions(settings);
       if (!permitted) {
-        status.textContent = "Server permission is required for LibreTranslate.";
+        status.textContent = "Permission to contact the selected translation servers is required.";
         return;
       }
       await saveSettings(settings);

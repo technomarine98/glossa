@@ -1,13 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Selection Translator for Zen",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Instant English–Russian translations beside your text selection.",
   "permissions": ["storage", "clipboardWrite"],
   "host_permissions": [
     "https://api.mymemory.translated.net/*",
     "https://translation.googleapis.com/*",
-    "https://libretranslate.com/*"
+    "https://libretranslate.com/*",
+    "https://lingva.ml/*",
+    "https://translate.plausibility.cloud/*",
+    "https://translate.fedilab.app/*",
+    "https://translate.cutie.dating/*"
   ],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": {

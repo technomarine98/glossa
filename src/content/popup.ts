@@ -19,6 +19,7 @@ export class TranslationPopup {
   private readonly loading = document.createElement("div");
   private readonly translation = document.createElement("div");
   private readonly error = document.createElement("div");
+  private readonly provider = document.createElement("div");
   private readonly copyButton = document.createElement("button");
   private readonly copyStatus = document.createElement("span");
   private readonly retryButton = document.createElement("button");
@@ -55,7 +56,9 @@ export class TranslationPopup {
     this.loading.append(spinner, loadingText);
     this.translation.className = "translation";
     this.error.className = "error";
-    body.append(this.loading, this.translation, this.error);
+    this.provider.className = "provider";
+    this.provider.hidden = true;
+    body.append(this.loading, this.translation, this.error, this.provider);
 
     const footer = document.createElement("div");
     footer.className = "footer";
@@ -92,6 +95,7 @@ export class TranslationPopup {
     this.retryButton.hidden = true;
     this.copyButton.hidden = true;
     this.copyStatus.textContent = "";
+    this.provider.hidden = true;
     this.reposition();
   }
 
@@ -105,6 +109,8 @@ export class TranslationPopup {
     this.translation.hidden = false;
     this.retryButton.hidden = true;
     this.copyButton.hidden = false;
+    this.provider.textContent = result.provider ? `${result.provider}${result.fallback ? " · Backup service" : ""}` : "";
+    this.provider.hidden = !result.provider;
     this.reposition();
   }
 
@@ -116,6 +122,7 @@ export class TranslationPopup {
     this.error.hidden = false;
     this.retryButton.hidden = false;
     this.copyButton.hidden = true;
+    this.provider.hidden = true;
     if (retryAt && retryAt > Date.now()) {
       const updateRetry = () => {
         const seconds = Math.ceil((retryAt - Date.now()) / 1000);

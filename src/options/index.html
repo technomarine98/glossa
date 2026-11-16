@@ -74,6 +74,7 @@
             <option value="mymemory">MyMemory (keyless)</option>
             <option value="libretranslate">LibreTranslate</option>
             <option value="google">Google Cloud Translation</option>
+            <option value="lingva">Lingva (keyless)</option>
           </select>
         </div>
         <div id="mymemory-settings">
@@ -89,6 +90,24 @@
         <div id="google-settings" hidden>
           <div class="row"><label for="googleApiKey">Google Cloud API key</label><input id="googleApiKey" type="password" autocomplete="off" required /></div>
           <p class="hint">Uses the official Cloud Translation Basic API. Billing and API access must be configured in Google Cloud.</p>
+        </div>
+        <div id="lingva-settings" hidden>
+          <div class="row"><label for="lingvaUrl">Lingva server URL</label><input id="lingvaUrl" type="url" placeholder="https://lingva.ml" /></div>
+          <p class="hint">Uses the server's public API without an API key. Lingva retrieves translations from Google Translate.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Backup translation services</h2>
+        <div class="check"><input id="fallbackEnabled" type="checkbox" /><label for="fallbackEnabled">Switch automatically when a service is unavailable</label></div>
+        <p class="hint">When the main service reaches a limit, times out, or fails, the selected text is sent to the backup servers below in order: Lingva, then LibreTranslate. Your API keys and contact email are not sent to backup servers. Disable this option to use only your main service.</p>
+        <div id="fallback-settings">
+          <label for="fallbackLingvaUrls">Lingva backup servers</label>
+          <p class="hint">One HTTP or HTTPS URL per line, up to two servers. Leave blank to skip Lingva.</p>
+          <textarea id="fallbackLingvaUrls" spellcheck="false"></textarea>
+          <label for="fallbackLibreTranslateUrls">LibreTranslate backup servers</label>
+          <p class="hint">One HTTP or HTTPS URL per line, up to two servers. Use servers that allow translation without an API key. Public servers may be unavailable or have usage limits.</p>
+          <textarea id="fallbackLibreTranslateUrls" spellcheck="false"></textarea>
         </div>
       </section>
 

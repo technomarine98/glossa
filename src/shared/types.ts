@@ -1,6 +1,6 @@
 export type Language = "auto" | "en" | "ru";
 export type TargetLanguage = Exclude<Language, "auto">;
-export type ProviderId = "mymemory" | "libretranslate" | "google";
+export type ProviderId = "mymemory" | "libretranslate" | "google" | "lingva";
 export type LanguageDirection = "auto" | "en-ru" | "ru-en";
 export type ModifierKey = "Alt" | "Control" | "Meta" | "Shift";
 
@@ -17,6 +17,10 @@ export interface TranslationSettings {
   libreTranslateUrl: string;
   libreTranslateApiKey: string;
   googleApiKey: string;
+  lingvaUrl: string;
+  fallbackEnabled: boolean;
+  fallbackLingvaUrls: string[];
+  fallbackLibreTranslateUrls: string[];
 }
 
 export interface TranslateMessage {
@@ -40,6 +44,8 @@ export interface TranslationSuccess {
   result: {
     text: string;
     detectedLanguage?: string;
+    provider?: string;
+    fallback?: boolean;
   };
   source: TargetLanguage;
   target: TargetLanguage;

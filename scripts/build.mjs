@@ -40,3 +40,4 @@ await build({
 });
 
 await cp(resolve(root, "public"), resolve(root, "dist"), { recursive: true });
+await cp(resolve(root, "LICENSE"), resolve(root, "dist/LICENSE"));

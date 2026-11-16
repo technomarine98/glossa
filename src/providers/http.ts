@@ -34,6 +34,6 @@ export async function readProviderJson<T>(response: Response, provider: string):
     if (response.status === 429) throw rateLimitError(response, provider);
     throw new ProviderError(response.ok
       ? `${provider} returned an invalid response.`
-      : `${provider} returned HTTP ${response.status}.`);
+      : `${provider} returned HTTP ${response.status}.`, response.ok || response.status >= 500 || response.status === 408 || response.status === 403);
   }
 }

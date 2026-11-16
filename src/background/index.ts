@@ -4,7 +4,7 @@ import type {
   TranslateMessage,
   TranslationResponse,
 } from "../shared/types";
-import { RateLimitError } from "../providers/types";
+import { FallbackError, ProviderUnavailableError, RateLimitError } from "../providers/types";
 import { TranslationService } from "./translator";
 
 let cooldownSave = Promise.resolve();
@@ -64,7 +64,7 @@ async function handleTranslation(
           ? error.message
           : "The translation request failed.",
       aborted,
-      retryAt: error instanceof RateLimitError ? error.retryAt : undefined,
+      retryAt: error instanceof RateLimitError || error instanceof ProviderUnavailableError || error instanceof FallbackError ? error.retryAt : undefined,
     };
   } finally {
     if (currentRequests.get(requestOwner)?.controller === controller) {

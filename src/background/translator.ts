@@ -1,7 +1,8 @@
 import { GoogleProvider } from "../providers/google";
 import { LibreTranslateProvider } from "../providers/libretranslate";
+import { LingvaProvider } from "../providers/lingva";
 import { MyMemoryProvider } from "../providers/mymemory";
-import { RateLimitError, type TranslationProvider, type TranslationResult } from "../providers/types";
+import { FallbackError, ProviderError, ProviderUnavailableError, RateLimitError, type TranslationProvider, type TranslationResult } from "../providers/types";
 import { detectLanguage } from "../shared/settings";
 import type { Language, TargetLanguage, TranslationSettings } from "../shared/types";
 import { TranslationCache } from "./cache";
@@ -14,13 +15,15 @@ function createProvider(settings: TranslationSettings): TranslationProvider {
       return new LibreTranslateProvider(settings.libreTranslateUrl, settings.libreTranslateApiKey);
     case "mymemory":
       return new MyMemoryProvider(settings.myMemoryEmail);
+    case "lingva":
+      return new LingvaProvider(settings.lingvaUrl);
   }
 }
 
 interface ProviderState {
   tail: Promise<void>;
   lastStarted: number;
-  cooldown?: RateLimitError;
+  cooldown?: RateLimitError | ProviderUnavailableError;
 }
 
 export interface SavedCooldown {
@@ -28,6 +31,8 @@ export interface SavedCooldown {
   provider: string;
   retryAt: number;
   dailyLimit: boolean;
+  kind?: "rate-limit" | "unavailable";
+  detail?: string;
 }
 
 function providerKey(settings: TranslationSettings): string {
@@ -35,7 +40,33 @@ function providerKey(settings: TranslationSettings): string {
     case "google": return JSON.stringify([settings.provider, settings.googleApiKey]);
     case "libretranslate": return JSON.stringify([settings.provider, settings.libreTranslateUrl, settings.libreTranslateApiKey]);
     case "mymemory": return JSON.stringify([settings.provider, settings.myMemoryEmail]);
+    case "lingva": return JSON.stringify([settings.provider, settings.lingvaUrl]);
   }
+}
+
+function providerName(settings: TranslationSettings): string {
+  switch (settings.provider) {
+    case "mymemory": return "MyMemory";
+    case "google": return "Google Cloud";
+    case "libretranslate": return "LibreTranslate";
+    case "lingva": return "Lingva";
+  }
+}
+
+function endpointKey(settings: TranslationSettings): string {
+  const url = settings.provider === "lingva" ? settings.lingvaUrl
+    : settings.provider === "libretranslate" ? settings.libreTranslateUrl : "";
+  return JSON.stringify([settings.provider, url.trim().replace(/\/+$/, "")]);
+}
+
+function fallbackSettings(settings: TranslationSettings): TranslationSettings[] {
+  if (!settings.fallbackEnabled) return [];
+  return [
+    ...settings.fallbackLingvaUrls.slice(0, 2).map((lingvaUrl) => ({ ...settings, provider: "lingva" as const, lingvaUrl })),
+    ...settings.fallbackLibreTranslateUrls.slice(0, 2).map((libreTranslateUrl) => ({
+      ...settings, provider: "libretranslate" as const, libreTranslateUrl, libreTranslateApiKey: "",
+    })),
+  ];
 }
 
 function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -69,6 +100,7 @@ export class TranslationService {
   constructor(
     private readonly minIntervalMs = 750,
     private readonly saveCooldowns?: (cooldowns: SavedCooldown[]) => Promise<void>,
+    private readonly requestTimeoutMs = 8000,
   ) {}
 
   restoreCooldowns(entries: unknown): void {
@@ -80,7 +112,9 @@ export class TranslationService {
       this.providers.set(entry.key, {
         tail: Promise.resolve(),
         lastStarted: 0,
-        cooldown: new RateLimitError(entry.provider, entry.retryAt, entry.dailyLimit),
+        cooldown: entry.kind === "unavailable"
+          ? new ProviderUnavailableError(entry.provider, entry.retryAt, typeof entry.detail === "string" ? entry.detail : `${entry.provider} is temporarily unavailable.`)
+          : new RateLimitError(entry.provider, entry.retryAt, entry.dailyLimit),
       });
     }
   }
@@ -89,7 +123,12 @@ export class TranslationService {
     return [...this.providers].flatMap(([key, state]) => {
       const cooldown = state.cooldown;
       return cooldown && cooldown.retryAt > Date.now()
-        ? [{ key, provider: cooldown.provider, retryAt: cooldown.retryAt, dailyLimit: cooldown.dailyLimit }]
+        ? [{
+          key, provider: cooldown.provider, retryAt: cooldown.retryAt,
+          dailyLimit: cooldown instanceof RateLimitError && cooldown.dailyLimit,
+          kind: cooldown instanceof RateLimitError ? "rate-limit" as const : "unavailable" as const,
+          detail: cooldown.message,
+        }]
         : [];
     });
   }
@@ -100,6 +139,40 @@ export class TranslationService {
     target: TargetLanguage,
     settings: TranslationSettings,
     signal: AbortSignal,
+  ): Promise<{ result: TranslationResult; cached: boolean }> {
+    const attempted = new Set<string>();
+    const errors: Array<RateLimitError | ProviderUnavailableError> = [];
+    const candidates = [settings, ...fallbackSettings(settings)];
+    for (const [index, candidate] of candidates.entries()) {
+      signal.throwIfAborted();
+      const endpoint = endpointKey(candidate);
+      if (attempted.has(endpoint)) continue;
+      attempted.add(endpoint);
+      const fallback = index > 0;
+      try {
+        const response = await this.translateProvider(text, source, target, candidate, signal, fallback);
+        return { ...response, result: { ...response.result, provider: providerName(candidate), fallback } };
+      } catch (error) {
+        signal.throwIfAborted();
+        if (!(error instanceof RateLimitError || error instanceof ProviderUnavailableError)) throw error;
+        if (!settings.fallbackEnabled) throw error;
+        errors.push(error);
+      }
+    }
+    if (errors.length === 1) throw errors[0];
+    throw new FallbackError(
+      Math.min(...errors.map((error) => error.retryAt)),
+      [...new Set(errors.map((error) => `${error.provider}: ${error instanceof RateLimitError ? "usage limit reached." : "temporarily unavailable."}`))],
+    );
+  }
+
+  private async translateProvider(
+    text: string,
+    source: Language,
+    target: TargetLanguage,
+    settings: TranslationSettings,
+    signal: AbortSignal,
+    fallback: boolean,
   ): Promise<{ result: TranslationResult; cached: boolean }> {
     signal.throwIfAborted();
     const normalizedText = text.trim();
@@ -122,24 +195,38 @@ export class TranslationService {
       if (cached) return { result: cached, cached: true };
       const cooldown = providerState.cooldown;
       if (cooldown && cooldown.retryAt > Date.now()) {
-        throw new RateLimitError(cooldown.provider, cooldown.retryAt, cooldown.dailyLimit);
+        throw cooldown;
       }
       const delay = providerState.lastStarted + this.minIntervalMs - Date.now();
       if (delay > 0) await wait(delay, signal);
       signal.throwIfAborted();
       providerState.lastStarted = Date.now();
+      const timeout = new AbortController();
+      const attemptSignal = AbortSignal.any([signal, timeout.signal]);
+      const timer = setTimeout(() => timeout.abort(new DOMException("Translation service timed out.", "TimeoutError")),
+        fallback ? Math.min(4000, this.requestTimeoutMs) : this.requestTimeoutMs);
       try {
-        const result = await translateText(normalizedText, resolvedSource, target, settings, signal);
+        const result = await abortable(translateText(normalizedText, resolvedSource, target, settings, attemptSignal), attemptSignal);
         this.cache.set(key, result);
         providerState.cooldown = undefined;
         return { result, cached: false };
       } catch (error) {
-        if (error instanceof RateLimitError) {
-          providerState.cooldown = error;
+        signal.throwIfAborted();
+        const retryable = error instanceof RateLimitError || error instanceof TypeError
+          || timeout.signal.aborted || (error instanceof ProviderError && (error.retryable || fallback));
+        if (retryable) {
+          const unavailable = error instanceof RateLimitError ? error : new ProviderUnavailableError(
+            providerName(settings), Date.now() + 30_000,
+            error instanceof Error ? error.message : "Translation service is temporarily unavailable.",
+          );
+          providerState.cooldown = unavailable;
           // Preserve the rate limit error even if session storage is unavailable.
           await this.saveCooldowns?.(this.activeCooldowns()).catch(() => undefined);
+          throw unavailable;
         }
         throw error;
+      } finally {
+        clearTimeout(timer);
       }
     });
     providerState.tail = task.then(() => undefined, () => undefined);

@@ -24,7 +24,8 @@ export class LibreTranslateProvider implements TranslationProvider {
   ): Promise<TranslationResult> {
     let endpoint: URL;
     try {
-      endpoint = new URL("/translate", this.baseUrl.replace(/\/$/, "") + "/");
+      endpoint = new URL("translate", this.baseUrl.replace(/\/$/, "") + "/");
+      if (!["http:", "https:"].includes(endpoint.protocol) || endpoint.username || endpoint.password) throw new Error();
     } catch {
       throw new ProviderError("Enter a valid LibreTranslate URL in the extension settings.");
     }
@@ -44,10 +45,10 @@ export class LibreTranslateProvider implements TranslationProvider {
     const data = await readProviderJson<LibreTranslateResponse>(response, "LibreTranslate");
     if (response.status === 429) throw rateLimitError(response, "LibreTranslate");
     if (!response.ok) {
-      throw new ProviderError(data.error || `LibreTranslate returned HTTP ${response.status}.`);
+      throw new ProviderError(data.error || `LibreTranslate returned HTTP ${response.status}.`, response.status >= 500 || response.status === 408);
     }
     if (!data.translatedText?.trim()) {
-      throw new ProviderError("LibreTranslate did not return a translation.");
+      throw new ProviderError("LibreTranslate did not return a translation.", true);
     }
 
     const detectedLanguage = typeof data.detectedLanguage === "string"

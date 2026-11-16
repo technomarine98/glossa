@@ -76,6 +76,12 @@
   overflow-wrap: anywhere;
 }
 
+.provider {
+  margin-top: 8px;
+  color: #5f6368;
+  font-size: 11px;
+}
+
 .footer {
   justify-content: flex-end;
   border-top: 1px solid #e8eaed;
@@ -143,7 +149,8 @@ button:focus-visible {
 
   .languages,
   .loading,
-  .copy-status {
+  .copy-status,
+  .provider {
     color: #bdc1c6;
   }
 

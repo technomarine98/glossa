@@ -38,12 +38,12 @@ export class GoogleProvider implements TranslationProvider {
     const data = await readProviderJson<GoogleResponse>(response, "Google Cloud");
     if (response.status === 429) throw rateLimitError(response, "Google Cloud");
     if (!response.ok) {
-      throw new ProviderError(data.error?.message || `Google Cloud returned HTTP ${response.status}.`);
+      throw new ProviderError(data.error?.message || `Google Cloud returned HTTP ${response.status}.`, response.status >= 500 || response.status === 408);
     }
 
     const translation = data.data?.translations?.[0];
     if (!translation?.translatedText) {
-      throw new ProviderError("Google Cloud did not return a translation.");
+      throw new ProviderError("Google Cloud did not return a translation.", true);
     }
 
     return {
